@@ -8,7 +8,7 @@ from airport.models import (
     Crew,
     Order,
     Flight,
-    Ticket
+    Ticket,
 )
 
 
