@@ -25,7 +25,11 @@ class Route(models.Model):
     distance = models.PositiveIntegerField(default=1)
 
     def __str__(self):
-        return f"{self.source.closest_big_city}-{self.destination.closest_big_city}"
+        return f"{self.source}-{self.destination}"
+
+    def clean(self):
+        if self.source == self.destination:
+            raise ValidationError("Source and destination airports must be different")
 
 
 class AirplaneType(models.Model):
@@ -39,10 +43,18 @@ class Airplane(models.Model):
     name = models.CharField(max_length=63, unique=True)
     rows = models.PositiveIntegerField(default=1)
     seats_in_row = models.PositiveIntegerField(default=1)
-    airplane_type = models.ForeignKey(AirplaneType, on_delete=models.CASCADE)
+    airplane_type = models.ForeignKey(
+        AirplaneType,
+        on_delete=models.CASCADE,
+        related_name="airplanes"
+    )
 
     def __str__(self):
         return f"{self.airplane_type} {self.name}"
+
+    @property
+    def capacity(self):
+        return self.rows * self.seats_in_row
 
 
 class Crew(models.Model):
@@ -55,39 +67,73 @@ class Crew(models.Model):
 
 class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="orders"
+    )
 
     class Meta:
         ordering = ["-created_at"]
 
     def __str__(self):
-        return str(self.created_at)
+        return f"Order {self.id} {self.user}"
 
 
 class Flight(models.Model):
-    route = models.ForeignKey(Route, on_delete=models.CASCADE)
-    airplane = models.ForeignKey(Airplane, on_delete=models.CASCADE)
+    route = models.ForeignKey(
+        Route,
+        on_delete=models.CASCADE,
+        related_name="flights"
+    )
+    airplane = models.ForeignKey(
+        Airplane,
+        on_delete=models.CASCADE,
+        related_name="flights"
+    )
     departure_time = models.DateTimeField()
     arrival_time = models.DateTimeField()
+    crew = models.ManyToManyField(
+        Crew,
+        related_name="flights"
+    )
 
     class Meta:
         ordering = ("departure_time", "arrival_time", "route", "airplane")
 
     def __str__(self):
-        return f"{self.route} {self.departure_time} {self.arrival_time}"
+        return f"Flight {self.route} {self.id}"
+
+    def clean(self):
+        if self.arrival_time <= self.departure_time:
+            raise ValidationError("Arrival time must be after departure time")
 
 
 class Ticket(models.Model):
     row = models.PositiveIntegerField()
     seat = models.PositiveIntegerField()
-    flight = models.ForeignKey(Flight, on_delete=models.CASCADE)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    flight = models.ForeignKey(
+        Flight,
+        on_delete=models.CASCADE,
+        related_name="tickets"
+    )
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="tickets"
+    )
 
     class Meta:
         ordering = ["row", "seat", "flight", "order"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["row", "seat", "flight"],
+                name="unique_ticket_per_seat_flight"
+            )
+        ]
 
     def __str__(self):
-        return f"{self.flight} - (row: {self.row} seat: {self.seat})"
+        return f"Ticket {self.id}: {self.flight} - (row: {self.row} seat: {self.seat})"
 
     @staticmethod
     def validate_seat_and_row(row: int, seat: int, airplane, error_to_raise):
@@ -104,6 +150,16 @@ class Ticket(models.Model):
     def clean(self):
         airplane = self.flight.airplane
         Ticket.validate_seat_and_row(self.row, self.seat, airplane, ValidationError)
+
+        if Ticket.objects.filter(
+                flight=self.flight, row=self.row, seat=self.seat
+        ).exclude(pk=self.pk).exists():
+            raise ValidationError(
+                {"seat": "This seat is already taken for this flight"}
+            )
+
+        if self.flight.tickets.exclude(pk=self.pk).count() >= airplane.rows * airplane.seats_in_row:
+            raise ValidationError("No seats available on this flight")
 
     def save(
         self,
