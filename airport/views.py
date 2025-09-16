@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.contrib.auth import get_user_model
 from airport.permissions import IsOwner
@@ -79,10 +80,15 @@ class CrewViewSet(viewsets.ModelViewSet):
     serializer_class = CrewSerializer
     permission_classes = [IsAdminUser]
 
+class TicketsFlightsPagination(PageNumberPagination):
+    page_size = 4
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 class FlightViewSet(viewsets.ModelViewSet):
     queryset = Flight.objects.all()
     serializer_class = FlightSerializer
+    pagination_class = TicketsFlightsPagination
 
     def get_queryset(self):
         return (
@@ -109,6 +115,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [IsOwner]
 
+
     def get_queryset(self):
         return (
             Order.objects
@@ -130,24 +137,38 @@ class TicketViewSet(viewsets.ModelViewSet):
     queryset = Ticket.objects.all()
     serializer_class = TicketSerializer
     permission_classes = [IsOwner]
-
+    pagination_class = TicketsFlightsPagination
 
     def get_queryset(self):
         user = self.request.user
+
+
+        if user.is_staff or user.is_superuser:
+            queryset = Ticket.objects.all()
+        else:
+            queryset = Ticket.objects.filter(order__user=user)
+
         return (
-            Ticket.objects
-            .filter(order__user=user)
-            .select_related(
+            queryset.select_related(
+                "order",
+                "order__user",
                 "flight",
+                "flight__airplane",
+                "flight__airplane__airplane_type",
                 "flight__route",
                 "flight__route__source",
                 "flight__route__destination",
-                "flight__airplane",
-                "flight__airplane__airplane_type",
-                "order",
-                "order__user",
             )
             .prefetch_related("flight__crew")
+            .order_by(
+                "row",
+                "seat",
+                "flight__departure_time",
+                "flight__arrival_time",
+                "flight__route_id",
+                "flight__airplane_id",
+                "order__created_at",
+            )
         )
 
     def get_serializer_class(self):
@@ -155,3 +176,6 @@ class TicketViewSet(viewsets.ModelViewSet):
             return TicketListSerializer
 
         return TicketSerializer
+
+    def perform_create(self, serializer):
+        serializer.save()

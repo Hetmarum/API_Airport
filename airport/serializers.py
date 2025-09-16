@@ -187,6 +187,30 @@ class TicketSerializer(serializers.ModelSerializer):
         queryset=Order.objects.all(), source="order", write_only=True
     )
 
+    def validate(self, data):
+        user = self.context["request"].user
+        order = data.get("order")
+        if not user.is_staff and order.user != user:
+            raise serializers.ValidationError("You cannot create tickets for other users")
+
+        flight = data.get("flight")
+        if flight:
+            airplane = flight.airplane
+            row = data.get("row")
+            seat = data.get("seat")
+
+            errors = {}
+            if not (1 <= row <= airplane.rows):
+                errors["row"] = f"Row must be between 1 and {airplane.rows}, got {row}"
+            if not (1 <= seat <= airplane.seats_in_row):
+                errors["seat"] = f"Seat must be between 1 and {airplane.seats_in_row}, got {seat}"
+
+            if errors:
+                raise serializers.ValidationError(errors)
+
+        return data
+
+
     class Meta:
         model = Ticket
         fields = ("id", "row", "seat", "flight", "order", "flight_id", "order_id")
