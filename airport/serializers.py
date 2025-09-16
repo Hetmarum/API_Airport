@@ -19,23 +19,15 @@ class AirportSerializer(serializers.ModelSerializer):
         model = Airport
         fields = ("id", "name", "closest_big_city")
 
-
-class RouteFieldsMixin(serializers.ModelSerializer):
-    source = serializers.SerializerMethodField()
-    destination = serializers.SerializerMethodField()
-    distance = serializers.SerializerMethodField()
-
-    def get_source(self, obj):
-        return [obj.source.name, obj.source.closest_big_city]
-
-    def get_destination(self, obj):
-        return [obj.destination.name, obj.destination.closest_big_city]
-
-    def get_distance(self, obj):
-        return f"{obj.distance} km"
+class AirportMiniSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Airport
+        fields = ("name", "closest_big_city")
 
 
-class RouteSerializer(RouteFieldsMixin):
+class RouteSerializer(serializers.ModelSerializer):
+    source = AirportMiniSerializer(read_only=True)
+    destination = AirportMiniSerializer(read_only=True)
     source_id = serializers.PrimaryKeyRelatedField(
         queryset=Airport.objects.all(), source="source", write_only=True
     )
@@ -45,23 +37,22 @@ class RouteSerializer(RouteFieldsMixin):
 
     class Meta:
         model = Route
-        fields = (
-            "id",
-            "source",
-            "destination",
-            "distance",
-            "source_id",
-            "destination_id",
-        )
+        fields = ("id", "source", "destination", "distance", "source_id", "destination_id")
 
 
-class RouteListSerializer(RouteFieldsMixin):
+class RouteListSerializer(serializers.ModelSerializer):
+    source = AirportMiniSerializer(read_only=True)
+    destination = AirportMiniSerializer(read_only=True)
+
     class Meta:
         model = Route
         fields = ("id", "source", "destination", "distance")
 
 
-class RouteMiniSerializer(RouteFieldsMixin):
+class RouteMiniSerializer(serializers.ModelSerializer):
+    source = AirportMiniSerializer(read_only=True)
+    destination = AirportMiniSerializer(read_only=True)
+
     class Meta:
         model = Route
         fields = ("source", "destination")
@@ -155,8 +146,8 @@ class FlightSerializer(serializers.ModelSerializer):
 
 
 class FlightListSerializer(FlightSerializer):
-    route = RouteListSerializer(read_only=True)
-    airplane = AirplaneListSerializer(read_only=True)
+    route = RouteMiniSerializer(read_only=True)
+    airplane = AirplaneMiniSerializer(read_only=True)
     crew = CrewListSerializer(many=True, read_only=True)
 
 
