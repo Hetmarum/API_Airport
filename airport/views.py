@@ -1,6 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.contrib.auth import get_user_model
+from airport.permissions import IsAdminOrReadOnly
 from airport.models import (
     Airport,
     Route,
@@ -14,6 +15,7 @@ from airport.models import (
 from airport.serializers import (
     AirportSerializer,
     RouteSerializer,
+    RouteListSerializer,
     AirplaneTypeSerializer,
     AirplaneSerializer,
     AirplaneListSerializer,
@@ -37,7 +39,12 @@ class AirportViewSet(viewsets.ModelViewSet):
 class RouteViewSet(viewsets.ModelViewSet):
     queryset = Route.objects.all()
     serializer_class = RouteSerializer
-    permission_classes = [IsAdminUser]
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return RouteListSerializer
+
+        return RouteSerializer
 
 
 class AirplaneTypeViewSet(viewsets.ModelViewSet):
@@ -67,7 +74,6 @@ class CrewViewSet(viewsets.ModelViewSet):
 class FlightViewSet(viewsets.ModelViewSet):
     queryset = Flight.objects.all()
     serializer_class = FlightSerializer
-    permission_classes = [IsAdminUser]
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -92,7 +98,6 @@ class OrderViewSet(viewsets.ModelViewSet):
 class TicketViewSet(viewsets.ModelViewSet):
     queryset = Ticket.objects.all()
     serializer_class = TicketSerializer
-    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user

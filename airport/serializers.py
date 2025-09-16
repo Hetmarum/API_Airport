@@ -20,9 +20,10 @@ class AirportSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "closest_big_city")
 
 
-class RouteAirportMixin(serializers.ModelSerializer):
+class RouteFieldsMixin(serializers.ModelSerializer):
     source = serializers.SerializerMethodField()
     destination = serializers.SerializerMethodField()
+    distance = serializers.SerializerMethodField()
 
     def get_source(self, obj):
         return [obj.source.name, obj.source.closest_big_city]
@@ -30,10 +31,11 @@ class RouteAirportMixin(serializers.ModelSerializer):
     def get_destination(self, obj):
         return [obj.destination.name, obj.destination.closest_big_city]
 
+    def get_distance(self, obj):
+        return f"{obj.distance} km"
 
-class RouteSerializer(serializers.ModelSerializer):
-    source = serializers.PrimaryKeyRelatedField(read_only=True)
-    destination = serializers.PrimaryKeyRelatedField(read_only=True)
+
+class RouteSerializer(RouteFieldsMixin):
     source_id = serializers.PrimaryKeyRelatedField(
         queryset=Airport.objects.all(), source="source", write_only=True
     )
@@ -53,18 +55,13 @@ class RouteSerializer(serializers.ModelSerializer):
         )
 
 
-class RouteListSerializer(RouteAirportMixin):
-    distance = serializers.SerializerMethodField()
-
+class RouteListSerializer(RouteFieldsMixin):
     class Meta:
         model = Route
         fields = ("id", "source", "destination", "distance")
 
-    def get_distance(self, obj):
-        return f"{obj.distance} km"
 
-
-class RouteMiniSerializer(RouteAirportMixin):
+class RouteMiniSerializer(RouteFieldsMixin):
     class Meta:
         model = Route
         fields = ("source", "destination")
