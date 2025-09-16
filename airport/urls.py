@@ -9,7 +9,7 @@ from airport.views import (
     CrewViewSet,
     FlightViewSet,
     OrderViewSet,
-    TicketViewSet
+    TicketViewSet,
 )
 
 router = routers.DefaultRouter()

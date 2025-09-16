@@ -20,10 +20,20 @@ class AirportSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "closest_big_city")
 
 
-class RouteSerializer(serializers.ModelSerializer):
-    source = AirportSerializer(read_only=True)
-    destination = AirportSerializer(read_only=True)
+class RouteAirportMixin(serializers.ModelSerializer):
+    source = serializers.SerializerMethodField()
+    destination = serializers.SerializerMethodField()
 
+    def get_source(self, obj):
+        return [obj.source.name, obj.source.closest_big_city]
+
+    def get_destination(self, obj):
+        return [obj.destination.name, obj.destination.closest_big_city]
+
+
+class RouteSerializer(serializers.ModelSerializer):
+    source = serializers.PrimaryKeyRelatedField(read_only=True)
+    destination = serializers.PrimaryKeyRelatedField(read_only=True)
     source_id = serializers.PrimaryKeyRelatedField(
         queryset=Airport.objects.all(), source="source", write_only=True
     )
@@ -41,6 +51,23 @@ class RouteSerializer(serializers.ModelSerializer):
             "source_id",
             "destination_id",
         )
+
+
+class RouteListSerializer(RouteAirportMixin):
+    distance = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Route
+        fields = ("id", "source", "destination", "distance")
+
+    def get_distance(self, obj):
+        return f"{obj.distance} km"
+
+
+class RouteMiniSerializer(RouteAirportMixin):
+    class Meta:
+        model = Route
+        fields = ("source", "destination")
 
 
 class AirplaneTypeSerializer(serializers.ModelSerializer):
@@ -69,10 +96,35 @@ class AirplaneSerializer(serializers.ModelSerializer):
         read_only_fields = ("capacity",)
 
 
+class AirplaneListSerializer(serializers.ModelSerializer):
+    airplane_type = serializers.SlugRelatedField(read_only=True, slug_field="name")
+
+    class Meta:
+        model = Airplane
+        fields = ("id", "name", "capacity", "airplane_type")
+
+
+class AirplaneMiniSerializer(serializers.ModelSerializer):
+    airplane_type = serializers.SlugRelatedField(read_only=True, slug_field="name")
+
+    class Meta:
+        model = Airplane
+        fields = ("name", "capacity", "airplane_type")
+
+
 class CrewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Crew
         fields = ("id", "first_name", "last_name")
+
+
+class CrewListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Crew
+        fields = ("id",)
+
+    def to_representation(self, obj):
+        return f"{obj.first_name} {obj.last_name}"
 
 
 class FlightSerializer(serializers.ModelSerializer):
@@ -105,12 +157,35 @@ class FlightSerializer(serializers.ModelSerializer):
         )
 
 
+class FlightListSerializer(FlightSerializer):
+    route = RouteListSerializer(read_only=True)
+    airplane = AirplaneListSerializer(read_only=True)
+    crew = CrewListSerializer(many=True, read_only=True)
+
+
+class FlightMiniSerializer(serializers.ModelSerializer):
+    route = RouteMiniSerializer(read_only=True)
+    airplane = AirplaneMiniSerializer(read_only=True)
+
+    class Meta:
+        model = Flight
+        fields = ("route", "airplane", "departure_time", "arrival_time")
+
+
 class OrderSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = Order
         fields = ("id", "created_at", "user")
+
+
+class OrderMiniSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ("created_at", "user")
 
 
 class TicketSerializer(serializers.ModelSerializer):
@@ -127,3 +202,12 @@ class TicketSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ticket
         fields = ("id", "row", "seat", "flight", "order", "flight_id", "order_id")
+
+
+class TicketListSerializer(serializers.ModelSerializer):
+    flight = FlightMiniSerializer(read_only=True)
+    order = OrderMiniSerializer(read_only=True)
+
+    class Meta:
+        model = Ticket
+        fields = ("id", "row", "seat", "flight", "order")

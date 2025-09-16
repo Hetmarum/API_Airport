@@ -16,10 +16,13 @@ from airport.serializers import (
     RouteSerializer,
     AirplaneTypeSerializer,
     AirplaneSerializer,
+    AirplaneListSerializer,
     CrewSerializer,
     FlightSerializer,
+    FlightListSerializer,
     OrderSerializer,
     TicketSerializer,
+    TicketListSerializer,
 )
 
 User = get_user_model()
@@ -48,6 +51,12 @@ class AirplaneViewSet(viewsets.ModelViewSet):
     serializer_class = AirplaneSerializer
     permission_classes = [IsAdminUser]
 
+    def get_serializer_class(self):
+        if self.action == "list":
+            return AirplaneListSerializer
+
+        return AirplaneSerializer
+
 
 class CrewViewSet(viewsets.ModelViewSet):
     queryset = Crew.objects.all()
@@ -59,6 +68,12 @@ class FlightViewSet(viewsets.ModelViewSet):
     queryset = Flight.objects.all()
     serializer_class = FlightSerializer
     permission_classes = [IsAdminUser]
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return FlightListSerializer
+
+        return FlightSerializer
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -82,3 +97,9 @@ class TicketViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         return Ticket.objects.filter(order__user=user)
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return TicketListSerializer
+
+        return TicketSerializer
