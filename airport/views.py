@@ -195,6 +195,27 @@ class TicketViewSet(viewsets.ModelViewSet):
     serializer_class = TicketSerializer
     permission_classes = [IsOwner]
     pagination_class = TicketsFlightsPagination
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.OrderingFilter,
+        filters.SearchFilter,
+    ]
+    filterset_fields = {
+        "flight__departure_time": ["gte", "lte"],
+        "flight__arrival_time": ["gte", "lte"],
+        "flight__route__source": ["exact"],
+        "flight__route__destination": ["exact"],
+        "flight__airplane__airplane_type": ["exact"],
+        "order__user": ["exact"],
+    }
+    ordering_fields = ["flight__departure_time", "flight__arrival_time"]
+    search_fields = [
+        "flight__route__source__name",
+        "flight__route__destination__name",
+        "flight__airplane__name",
+        "flight__route__destination__closest_big_city",
+        "order__user__email",
+    ]
 
     def get_queryset(self):
         user = self.request.user
