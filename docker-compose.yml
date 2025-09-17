@@ -1,5 +1,5 @@
 services:
-  airport:
+  app:
     build:
       context: .
     env_file:
@@ -9,9 +9,13 @@ services:
     volumes:
       - ./:/app
     command: >
-      sh -c "until pg_isready -h db -p 5432; do sleep 1; done &&
-         python manage.py migrate &&
-         python manage.py runserver 0.0.0.0:8000"
+      sh -c "python manage.py migrate && \
+      python manage.py runserver 0.0.0.0:8000"
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-h", "db", "-p", "5432" ]
+      interval: 2s
+      timeout: 3s
+      retries: 5
     depends_on:
       - db
 
@@ -24,11 +28,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_db:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD", "pg_isready", "-h", "db", "-p", "5432" ]
-      interval: 2s
-      timeout: 3s
-      retries: 5
 
 volumes:
   postgres_db:
