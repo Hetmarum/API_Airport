@@ -91,22 +91,26 @@ class FlightViewSet(viewsets.ModelViewSet):
     pagination_class = TicketsFlightsPagination
 
     def get_queryset(self):
-        return (
-            Flight.objects
-            .select_related(
-                "route",
+        queryset = Flight.objects.all()
+
+        if self.action == "list":
+            queryset = queryset.select_related(
                 "route__source",
                 "route__destination",
-                "airplane",
-                "airplane__airplane_type",
+                "airplane__airplane_type"
             )
-            .prefetch_related("crew")
-        )
+        else:
+            queryset = queryset.select_related(
+                "route__source",
+                "route__destination",
+                "airplane__airplane_type"
+            ).prefetch_related("crew")
+
+        return queryset.order_by("departure_time", "arrival_time")
 
     def get_serializer_class(self):
         if self.action == "list":
             return FlightListSerializer
-
         return FlightSerializer
 
 
@@ -141,23 +145,31 @@ class TicketViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-
-
-        if user.is_staff or user.is_superuser:
-            queryset = Ticket.objects.all()
-        else:
-            queryset = Ticket.objects.filter(order__user=user)
+        queryset = (
+            Ticket.objects.all()
+            if user.is_staff or user.is_superuser
+            else Ticket.objects.filter(order__user=user)
+        )
 
         return (
-            queryset.select_related(
-                "order",
+            queryset
+            .select_related(
                 "order__user",
-                "flight",
                 "flight__airplane",
                 "flight__airplane__airplane_type",
-                "flight__route",
                 "flight__route__source",
                 "flight__route__destination",
+            )
+            .only(
+                "id", "row", "seat",
+                "flight__id", "flight__departure_time", "flight__arrival_time",
+                "flight__airplane__name",
+                "flight__airplane__airplane_type__name",
+                "flight__route__id",
+                "flight__route__source__id", "flight__route__source__closest_big_city",
+                "flight__route__destination__id", "flight__route__destination__closest_big_city",
+                "order__id", "order__created_at",
+                "order__user__id", "order__user__email"
             )
             .prefetch_related("flight__crew")
             .order_by(
@@ -167,10 +179,9 @@ class TicketViewSet(viewsets.ModelViewSet):
                 "flight__arrival_time",
                 "flight__route_id",
                 "flight__airplane_id",
-                "order__created_at",
+                "order__created_at"
             )
         )
-
     def get_serializer_class(self):
         if self.action == "list":
             return TicketListSerializer
