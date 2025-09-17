@@ -32,7 +32,7 @@ User = get_user_model()
 
 
 class AirportViewSet(viewsets.ModelViewSet):
-    queryset = Airport.objects.all()
+    queryset = Airport.objects.all().order_by("id")
     serializer_class = AirportSerializer
     permission_classes = [IsAdminUser]
 
