@@ -22,7 +22,6 @@ class UserSerializer(serializers.ModelSerializer):
                 "min_length": 5,
                 "style": {"input_type": "password"},
                 "label": _("Password"),
-
             },
         }
 

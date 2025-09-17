@@ -112,6 +112,7 @@ class FlightViewSet(viewsets.ModelViewSet):
     """
     CRUD for flights with route, airplane, crew info, and city in list view.
     """
+
     queryset = Flight.objects.all()
     serializer_class = FlightSerializer
     pagination_class = TicketsFlightsPagination
@@ -153,6 +154,7 @@ class FlightViewSet(viewsets.ModelViewSet):
         if self.action == "list":
             return FlightListSerializer
         return FlightSerializer
+
 
 class OrderViewSet(viewsets.ModelViewSet):
     """

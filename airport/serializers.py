@@ -134,12 +134,8 @@ class FlightSerializer(serializers.ModelSerializer):
 
 
 class FlightListSerializer(serializers.ModelSerializer):
-    source = serializers.CharField(
-        source="route.source.name", read_only=True
-    )
-    destination = serializers.CharField(
-        source="route.destination.name", read_only=True
-    )
+    source = serializers.CharField(source="route.source.name", read_only=True)
+    destination = serializers.CharField(source="route.destination.name", read_only=True)
     city = serializers.CharField(
         source="route.destination.closest_big_city", read_only=True
     )
