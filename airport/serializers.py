@@ -39,13 +39,15 @@ class RouteSerializer(serializers.ModelSerializer):
             "destination",
             "distance",
             "source_id",
-            "destination_id"
+            "destination_id",
         )
 
 
 class RouteListSerializer(serializers.ModelSerializer):
     source = serializers.CharField(source="source.closest_big_city", read_only=True)
-    destination = serializers.CharField(source="destination.closest_big_city", read_only=True)
+    destination = serializers.CharField(
+        source="destination.closest_big_city", read_only=True
+    )
 
     class Meta:
         model = Route
@@ -132,8 +134,15 @@ class FlightSerializer(serializers.ModelSerializer):
 
 
 class FlightListSerializer(serializers.ModelSerializer):
-    source = serializers.CharField(source="route.source.closest_big_city", read_only=True)
-    destination = serializers.CharField(source="route.destination.closest_big_city", read_only=True)
+    source = serializers.CharField(
+        source="route.source.name", read_only=True
+    )
+    destination = serializers.CharField(
+        source="route.destination.name", read_only=True
+    )
+    city = serializers.CharField(
+        source="route.destination.closest_big_city", read_only=True
+    )
     airplane = serializers.SlugRelatedField(read_only=True, slug_field="name")
 
     class Meta:
@@ -142,6 +151,7 @@ class FlightListSerializer(serializers.ModelSerializer):
             "id",
             "source",
             "destination",
+            "city",
             "airplane",
             "departure_time",
             "arrival_time",
@@ -171,7 +181,9 @@ class TicketSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         order = data.get("order")
         if not user.is_staff and order.user != user:
-            raise serializers.ValidationError("You cannot create tickets for other users")
+            raise serializers.ValidationError(
+                "You cannot create tickets for other users"
+            )
 
         flight = data.get("flight")
         if flight:
@@ -183,13 +195,14 @@ class TicketSerializer(serializers.ModelSerializer):
             if not (1 <= row <= airplane.rows):
                 errors["row"] = f"Row must be between 1 and {airplane.rows}, got {row}"
             if not (1 <= seat <= airplane.seats_in_row):
-                errors["seat"] = f"Seat must be between 1 and {airplane.seats_in_row}, got {seat}"
+                errors["seat"] = (
+                    f"Seat must be between 1 and {airplane.seats_in_row}, got {seat}"
+                )
 
             if errors:
                 raise serializers.ValidationError(errors)
 
         return data
-
 
     class Meta:
         model = Ticket
@@ -197,11 +210,19 @@ class TicketSerializer(serializers.ModelSerializer):
 
 
 class TicketListSerializer(serializers.ModelSerializer):
-    source = serializers.CharField(source="flight.route.source.closest_big_city", read_only=True)
-    destination = serializers.CharField(source="flight.route.destination.closest_big_city", read_only=True)
+    source = serializers.CharField(
+        source="flight.route.source.closest_big_city", read_only=True
+    )
+    destination = serializers.CharField(
+        source="flight.route.destination.closest_big_city", read_only=True
+    )
     airplane = serializers.CharField(source="flight.airplane.name", read_only=True)
-    departure_time = serializers.DateTimeField(source="flight.departure_time", read_only=True)
-    arrival_time = serializers.DateTimeField(source="flight.arrival_time", read_only=True)
+    departure_time = serializers.DateTimeField(
+        source="flight.departure_time", read_only=True
+    )
+    arrival_time = serializers.DateTimeField(
+        source="flight.arrival_time", read_only=True
+    )
     order_created = serializers.DateTimeField(source="order.created_at", read_only=True)
     order_user = serializers.StringRelatedField(source="order.user", read_only=True)
 
@@ -215,7 +236,8 @@ class TicketListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ticket
         fields = (
-            "id", "row",
+            "id",
+            "row",
             "seat",
             "flight_id",
             "order_id",
