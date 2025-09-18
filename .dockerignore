@@ -1,6 +1,6 @@
 .idea/
 .venv/
 __pycache__/
-migrations/
 .env
 *.sqlite3
+Dockerfile
