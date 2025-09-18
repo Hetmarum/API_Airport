@@ -18,3 +18,13 @@ A Django REST Framework (DRF) project for managing **airports, routes, flights, 
   - Prevents duplicate seats for flights  
   - Checks row/seat availability against airplane capacity
 - **API Documentation** with **drf-spectacular + Swagger UI**
+
+-**instalation**
+ - python -m venv venv
+ - source venv/bin/activate       # On Linux/Mac
+ - venv\Scripts\activate          # On Windows
+ - pip install -r requirements.txt
+ - create .env file from .env.sample and populate it with relevant data
+ - python manage.py migrate
+ - python manage.py createsuperuser
+ - python manage.py runserver
